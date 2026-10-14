@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SmartPark – AI Parking Search</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%231A73E8'/%3E%3Cpath d='M8 18V6h5a4 4 0 0 1 0 8H8' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+  <!-- ============================== SIDEBAR ============================== -->
+  <aside class="sidebar">
+    <header class="app-header">
+      <svg class="logo" width="30" height="30" viewBox="0 0 24 24" aria-hidden="true">
+        <rect width="24" height="24" rx="6" fill="#1A73E8"/>
+        <path d="M8 18V6h5a4 4 0 0 1 0 8H8" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div>
+        <h1 class="brand-title"><strong>Smart</strong>Park</h1>
+        <p class="brand-subtitle">AI search for parking allocation</p>
+      </div>
+    </header>
+
+    <!-- 1. Algorithm -->
+    <section class="sidebar-section">
+      <span class="spec-label">Search algorithm</span>
+      <div id="algo-picker" class="segmented"></div>
+      <p class="algo-note"><code id="algo-rule"></code><br><span id="algo-desc"></span></p>
+    </section>
+
+    <!-- 2. Heuristic, live -->
+    <section class="sidebar-section">
+      <span class="spec-label" id="calc-title">Heuristic function</span>
+      <div class="calc" id="calc"></div>
+    </section>
+
+    <!-- 3. Run -->
+    <section class="sidebar-section">
+      <span class="spec-label">Vehicle</span>
+      <div id="vehicle-picker" class="segmented"></div>
+      <button type="button" id="run-btn" class="primary-btn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21.71 11.29l-9-9a1 1 0 0 0-1.42 0l-9 9a1 1 0 0 0 0 1.42l9 9a1 1 0 0 0 1.42 0l9-9a1 1 0 0 0 0-1.42zM14 14.5V12h-4v3H8v-4a1 1 0 0 1 1-1h5V7.5l3.5 3.5-3.5 3.5z"/></svg>
+        Find Parking
+      </button>
+      <div id="message" class="message-banner" hidden></div>
+      <div id="summary" class="route-summary-card" hidden></div>
+    </section>
+
+    <!-- 4. Playback -->
+    <section class="sidebar-section">
+      <span class="spec-label">Playback</span>
+      <button type="button" id="pb-start" class="secondary-btn">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+        Start from beginning
+      </button>
+      <div class="playback-row">
+        <button type="button" class="icon-btn" id="pb-back" title="Step back (←)" aria-label="Step back">
+          <svg viewBox="0 0 24 24"><path d="M15.4 7.4 14 6l-6 6 6 6 1.4-1.4L10.8 12z"/></svg></button>
+        <button type="button" class="icon-btn icon-btn-primary" id="pb-play" title="Play / pause (Space)" aria-label="Play / pause">
+          <svg viewBox="0 0 24 24" id="pb-play-icon"><path d="M8 5v14l11-7z"/></svg></button>
+        <button type="button" class="icon-btn" id="pb-fwd" title="Step forward (→)" aria-label="Step forward">
+          <svg viewBox="0 0 24 24"><path d="M8.6 16.6 10 18l6-6-6-6-1.4 1.4 4.6 4.6z"/></svg></button>
+        <input type="range" id="pb-scrub" class="range" min="0" max="1" step="0.01" value="0" aria-label="Timeline">
+        <span class="num step-count" id="pb-step">—</span>
+      </div>
+      <div class="speed-row">
+        <label class="spec-label" for="pb-speed">Speed</label>
+        <input type="range" id="pb-speed" class="range" min="1" max="20" value="6">
+        <span class="num" id="pb-speed-value">6x</span>
+      </div>
+      <label class="check"><input type="checkbox" id="show-values" checked> <span id="show-values-label">Show h(n) on the map</span></label>
+    </section>
+
+    <!-- 5. Comparison -->
+    <section class="sidebar-section" id="sec-compare" hidden>
+      <span class="spec-label">All algorithms, same spot</span>
+      <table class="compare-table" id="compare-table"></table>
+      <p class="hint">Click a row to watch that algorithm.</p>
+    </section>
+
+    <!-- 6. Map editing -->
+    <section class="sidebar-section">
+      <span class="spec-label">Click on the map to</span>
+      <div id="tool-picker" class="segmented"></div>
+      <button type="button" id="reset-btn" class="text-btn">Reset parking lot</button>
+    </section>
+
+    <footer class="sidebar-footer">
+      <div id="footer-stats"></div>
+      <div class="kbd-hints"><kbd>Enter</kbd> find <kbd>Space</kbd> play/pause <kbd>←</kbd><kbd>→</kbd> step</div>
+    </footer>
+  </aside>
+
+  <!-- ============================== MAP ============================== -->
+  <main class="stage" id="stage">
+    <div class="map-frame">
+      <canvas id="canvas"></canvas>
+      <div class="map-caption" id="caption"></div>
+      <div class="map-status" id="status"></div>
+      <div class="value-key" id="value-key"></div>
+    </div>
+    <div class="legend">
+      <div><i class="lg lg-available"></i>Free</div>
+      <div><i class="lg lg-reserved"></i>Reserved</div>
+      <div><i class="lg lg-occupied"></i>Occupied</div>
+      <div><i class="lg lg-explored"></i>Explored</div>
+      <div><i class="lg lg-frontier"></i>Waiting (open list)</div>
+      <div><i class="lg lg-route"></i>Route</div>
+      <div><i class="lg lg-blocked"></i>Road closed</div>
+      <div><i class="lg lg-pillar"></i>Pillar</div>
+    </div>
+    <div class="tooltip" id="tooltip" hidden></div>
+  </main>
+</div>
+
+<script src="js/lot.js"></script>
+<script src="js/search.js"></script>
+<script src="js/allocator.js"></script>
+<script src="js/renderer.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
